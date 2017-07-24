@@ -3,37 +3,117 @@
 <html>
 
 	<head>
-		<title>Clementine.js - The elegant and lightweight full stack JavaScript boilerplate.</title>
+		<title>FCC Real-Time Stocks</title>
 		
 		<link href="/public/css/main.css" rel="stylesheet" type="text/css">
+		<link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
 	</head>
 
-	<header>
-		<p>Welcome, <span id="display-name"></span>!</p>
-		<a class="menu" href="/profile">Profile</a>
-		<p>|</p>
-		<a class="menu" href="/logout">Logout</a>
-	</header>
-
 	<body>
-		<div class="container">
-			<img src="/public/img/clementine_150.png" />
-			<br />
-			<p class="clementine-text">Clementine.js</p>
-		</div>
-	
-		<div class="container">
-			<p>You have clicked the button <span id="click-nbr"></span> times.</p>
-			<br />
-			<div class="btn-container">
-				<button type="submit" class="btn btn-add">CLICK ME!</button>
-				<button class="btn btn-delete">RESET</button>
+		<h2>FreeCodeCamp Real-Time Stock Web App</h2>
+		
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.0.3/socket.io.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.6.0/Chart.bundle.js"></script>
+		<canvas id="myChart" width="400" height="400"></canvas>
+		
+		
+		<h2>Stock List</h2>
+		<div id="stocks" class="text-center"></div>
+		
+		<div class="row">
+			<div class="col-md-9">
+				<input type="text" id="new" class="form-control" />
+			</div>
+			<div class="col-md-3">
+				<button class="btn btn-default" onclick="addStock()">Add stock</button>
 			</div>
 		</div>
 		
-		<script type="text/javascript" src="common/ajax-functions.js"></script>
-		<script type="text/javascript" src="controllers/clickController.client.js"></script>
-		<script type="text/javascript" src="controllers/userController.client.js"></script>
+		<script>
+			/* global io */
+			/* global Chart */
+			var LIST = [];
+			var socket = io();
+			
+			var canvas = document.getElementById("myChart");
+			var ctx = canvas.getContext('2d');
+			var myChart = new Chart(ctx, {
+			    type: 'line',
+			    data: {
+			    	datasets: [],
+			    	labels: []
+			    },
+			    options: {
+			        scales: {
+			            yAxes: [{
+			                ticks: {
+			                    beginAtZero:true
+			                }
+			            }]
+			        }
+			    }
+			});
+			
+			
+			socket.on("list", (list) => {
+				console.log(list);
+				LIST = list.datasets.map((val) => val.label);
+				
+				myChart.data.datasets = list.datasets;
+				myChart.data.labels = list.labels;
+				
+				myChart.update();
+				
+				renderList();
+			});
+			
+			function renderList() {
+				let main = document.getElementById("stocks");
+				main.innerHTML = "";
+				
+				LIST.forEach((val, i) => {
+					let node = document.createElement("DIV");
+					node.classList.add("row");
+					
+					let text = document.createElement("DIV");
+					text.innerHTML = val;
+					text.classList.add("col-md-9");
+					
+					let delDiv = document.createElement("DIV");
+					delDiv.classList.add("col-md-3");
+					
+					let delButton = document.createElement("BUTTON");
+					delButton.innerHTML = "Delete";
+					delButton.classList.add("btn");
+					delButton.classList.add("btn-danger");
+					delButton.addEventListener("click", () => deleteStock(i));
+					
+					delDiv.appendChild(delButton);
+					
+					node.appendChild(text);
+					node.appendChild(delDiv);
+					
+					main.appendChild(node);
+				});
+			}
+			
+			function addStock() {
+				let field = document.getElementById("new");
+				
+				let text = field.value;
+				
+				if(text != "") {
+					socket.emit("add", text);
+					
+					field.value = "";
+				}
+			}
+			
+			function deleteStock(i) {
+				socket.emit("delete", LIST[i]);
+			}
+		</script>
+
 	</body>
 
 </html>
